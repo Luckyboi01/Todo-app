@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Flow State Tasks</title>
+    <meta name="description" content="A gamified productivity to-do list app with XP rewards and themes.">
+    <!-- FAVICON (Cat Emoji) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐱</text></svg>">
+    
+    <style>
+        :root {
+            /* --- GLOBAL VARIABLES --- */
+            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+            --transition: 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+            /* Default Light Theme */
+            --bg-grad: linear-gradient(-45deg, #e0eafc, #cfdef3, #e8f0ff);
+            --text-main: #2d3436; --text-sec: #636e72;
+            --card-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --accent: #6c5ce7; --success: #00b894; --danger: #ff7675;
+            --xp-color: #fd79a8;
+            --input-bg: rgba(255, 255, 255, 0.5);
+        }
+
+        /* --- THEMES --- */
+        [data-theme="dark"] {
+            --bg-grad: linear-gradient(-45deg, #0f0c29, #302b63, #24243e);
+            --text-main: #f1f2f6; --text-sec: #a4b0be;
+            --card-bg: rgba(30, 30, 40, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --accent: #a29bfe; --input-bg: rgba(0, 0, 0, 0.2);
+        }
+
+        [data-theme="midnight"] {
+            --bg-grad: linear-gradient(-45deg, #2c003e, #512b58, #2c003e);
+            --text-main: #e0c3fc; --text-sec: #b39ddb;
+            --card-bg: rgba(60, 20, 80, 0.5);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent: #d63384; --success: #00d2d3; --danger: #ff4757;
+            --xp-color: #ff9ff3; --input-bg: rgba(255, 255, 255, 0.05);
+        }
+
+        [data-theme="hacker"] {
+            --bg-grad: linear-gradient(-45deg, #000000, #0a1f0a, #000000);
+            --text-main: #00ff41; --text-sec: #008f11;
+            --card-bg: rgba(0, 50, 0, 0.7);
+            --glass-border: rgba(0, 255, 65, 0.2);
+            --accent: #00ff41; --success: #00ff41; --danger: #ff3f34;
+            --xp-color: #00ff41; --input-bg: #001100;
+        }
+
+        [data-theme="sunset"] {
+            --bg-grad: linear-gradient(-45deg, #ff9a9e, #fad0c4, #fad0c4);
+            --text-main: #6d214f; --text-sec: #b33771;
+            --card-bg: rgba(255, 255, 255, 0.5);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --accent: #ff6b6b; --success: #1dd1a1; --danger: #eb4d4b;
+            --xp-color: #feca57; --input-bg: #fff0f0;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        
+        body {
+            margin: 0; padding: 0; font-family: var(--font);
+            color: var(--text-main);
+            background: var(--bg-grad); background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            min-height: 100vh; 
+            overflow-x: hidden;
+            transition: background 0.8s ease, color 0.5s ease;
+            position: relative;
+            padding-bottom: 40px;
+        }
+
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; padding-bottom: 0; }
+
+        /* --- Header --- */
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .greeting-area h1 { font-size: 1.8rem; font-weight: 800; margin: 0; background: linear-gradient(to right, var(--accent), var(--xp-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .date { font-size: 0.85rem; color: var(--text-sec); font-weight: 600; opacity: 0.8; }
+        
+        .header-controls { display: flex; gap: 10px; }
+        .icon-btn {
+            background: var(--card-bg); border: 1px solid var(--glass-border);
+            width: 44px; height: 44px; border-radius: 14px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(8px); box-shadow: var(--shadow);
+            color: var(--text-main); transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .icon-btn:active { transform: scale(0.85); }
+        .icon-btn svg { width: 22px; height: 22px; stroke-width: 2; }
+
+        /* --- HUD --- */
+        .hud-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 15px; margin-bottom: 30px; }
+        .hud-card {
+            background: var(--card-bg); backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); border-radius: 24px; padding: 16px;
+            box-shadow: var(--shadow); position: relative; overflow: hidden;
+            display: flex; flex-direction: column; justify-content: center;
+        }
+        
+        .prog-wrap { display: flex; align-items: center; gap: 15px; }
+        .prog-circle { width: 54px; height: 54px; position: relative; flex-shrink: 0; }
+        .prog-circle svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+        .prog-circle circle { fill: none; stroke-width: 6; stroke-linecap: round; }
+        .bg-c { stroke: var(--text-sec); opacity: 0.1; }
+        .fg-c { stroke: var(--success); transition: stroke-dashoffset 1s cubic-bezier(0.22, 1, 0.36, 1); }
+        
+        /* TAPPABLE BADGE & MILESTONE HINT */
+        .xp-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; font-weight: 700; font-size: 0.8rem; }
+        .badge { 
+            background: var(--accent); color: white; padding: 3px 10px; border-radius: 12px; 
+            font-size: 0.75rem; box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
+            cursor: pointer; transition: transform 0.2s;
+        }
+        .badge:active { transform: scale(0.9); }
+        
+        .milestone-hint {
+            font-size: 0.7rem; color: var(--text-sec); 
+            margin-bottom: 5px; font-weight: 600; opacity: 0.9;
+            display: flex; align-items: center; gap: 5px;
+        }
+        
+        .xp-track { height: 8px; background: rgba(0,0,0,0.05); border-radius: 4px; overflow: hidden; position: relative; }
+        .xp-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--xp-color)); width: 0%; transition: width 0.6s ease; }
+
+        /* --- Filters --- */
+        .cat-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px; scrollbar-width: none; }
+        .pill {
+            padding: 8px 18px; border-radius: 20px; background: var(--card-bg);
+            backdrop-filter: blur(5px); border: 1px solid var(--glass-border);
+            color: var(--text-sec); font-size: 0.9rem; cursor: pointer; white-space: nowrap;
+            display: flex; align-items: center; gap: 8px; font-weight: 600; transition: all 0.3s ease;
+        }
+        .pill.active { background: var(--text-main); color: var(--bg-color); border-color: transparent; transform: scale(1.05); }
+        .add-pill { border: 1px dashed var(--accent); color: var(--accent); }
+
+        /* --- Task List --- */
+        .task-list { display: flex; flex-direction: column; gap: 16px; perspective: 1000px; min-height: 200px; }
+        .task-card {
+            background: var(--card-bg); backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border); border-radius: 20px; padding: 18px;
+            box-shadow: var(--shadow); position: relative;
+            transition: transform 0.3s, opacity 0.3s, box-shadow 0.3s;
+            animation: slideUp 0.5s ease backwards; transform-style: preserve-3d;
+        }
+        .task-card:hover { transform: translateY(-3px) scale(1.01); box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
+        .task-card.completed { opacity: 0.6; filter: grayscale(0.8); }
+        .task-card.deleting { animation: snap 0.6s forwards; }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes snap { to { opacity: 0; transform: scale(0.8) rotate(10deg); filter: blur(10px); } }
+
+        .card-main { display: flex; align-items: flex-start; gap: 14px; }
+        .check-box {
+            width: 26px; height: 26px; border-radius: 8px; border: 2px solid var(--text-sec);
+            cursor: pointer; display: grid; place-items: center; flex-shrink: 0; margin-top: 3px;
+            transition: 0.3s;
+        }
+        .task-card.completed .check-box { background: var(--success); border-color: var(--success); }
+        .check-box svg { width: 16px; height: 16px; stroke: white; stroke-width: 3; stroke-dasharray: 24; stroke-dashoffset: 24; transition: stroke-dashoffset 0.4s ease 0.1s; }
+        .task-card.completed .check-box svg { stroke-dashoffset: 0; }
+
+        .info { flex: 1; }
+        .title { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; display: block; }
+        .task-card.completed .title { text-decoration: line-through; color: var(--text-sec); }
+        .tags { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.75rem; margin-bottom: 10px; }
+        .tag { padding: 4px 10px; border-radius: 8px; background: rgba(0,0,0,0.05); font-weight: 600; color: var(--text-sec); }
+        
+        .subs { background: rgba(0,0,0,0.03); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+        .sub-row { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; cursor: pointer; color: var(--text-main); opacity: 0.9; }
+        .sub-sq { width: 14px; height: 14px; border: 2px solid var(--text-sec); border-radius: 4px; transition: 0.2s; }
+        .sub-row.done .sub-sq { background: var(--text-sec); }
+        .sub-row.done span { text-decoration: line-through; opacity: 0.6; }
+
+        .actions { display: flex; justify-content: flex-end; gap: 15px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--glass-border); }
+        .act-btn { background: none; border: none; font-size: 0.85rem; font-weight: 700; color: var(--text-sec); cursor: pointer; display: flex; align-items: center; gap: 5px; opacity: 0.7; }
+        .act-btn:hover { opacity: 1; transform: scale(1.1); color: var(--accent); }
+        .btn-del:hover { color: var(--danger); }
+
+        /* --- SLEEPING CAT SVG & ANIMATIONS --- */
+        .empty-state { text-align: center; padding: 40px 20px; opacity: 0.9; animation: fadeIn 0.8s ease; }
+        .cat-wrapper { width: 200px; height: 150px; margin: 0 auto; position: relative; }
+        .cat-body-svg { width: 100%; height: 100%; animation: breathe 4s ease-in-out infinite alternate; transform-origin: bottom center; }
+        .dream-bubble { position: absolute; top: -10px; right: 40px; animation: floatBubble 3s ease-in-out infinite; }
+        .z-letter { font-family: 'Comic Sans MS', cursive, sans-serif; fill: var(--text-sec); font-weight: bold; font-size: 14px; opacity: 0; }
+        .z1 { animation: floatZ 3s ease-in-out infinite 0s; }
+        .z2 { animation: floatZ 3s ease-in-out infinite 1s; }
+        .z3 { animation: floatZ 3s ease-in-out infinite 2s; }
+
+        @keyframes breathe { 0% { transform: scaleY(1); } 100% { transform: scaleY(1.03) scaleX(1.01); } }
+        @keyframes floatBubble { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        @keyframes floatZ { 0% { transform: translateY(10px) translateX(-5px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-15px) translateX(5px); opacity: 0; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 0.9; transform: translateY(0); } }
+
+        /* --- LEVEL ROADMAP MODAL --- */
+        .level-roadmap {
+            max-height: 400px; overflow-y: auto; 
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); 
+            gap: 12px; padding: 10px 0;
+        }
+        .level-item {
+            background: var(--input-bg); border-radius: 12px; padding: 10px; 
+            text-align: center; border: 2px solid transparent; transition: 0.3s;
+        }
+        .level-item.current { border-color: var(--accent); background: var(--card-bg); transform: scale(1.05); }
+        .level-item.unlocked { opacity: 0.5; }
+        .level-num { font-size: 1.2rem; font-weight: 800; color: var(--text-main); }
+        .level-reward { font-size: 0.7rem; color: var(--text-sec); margin-top: 5px; font-weight: 600; }
+
+        /* --- Reward Modal --- */
+        .reward-modal { text-align: center; }
+        .reward-icon { font-size: 4rem; margin-bottom: 10px; animation: bounce 1s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .quote-box { background: rgba(0,0,0,0.05); padding: 15px; border-radius: 12px; font-style: italic; color: var(--text-sec); margin: 15px 0; font-size: 0.95rem; }
+
+        /* --- Floating XP --- */
+        .float-text { position: fixed; font-weight: 800; font-size: 1.2rem; color: var(--xp-color); pointer-events: none; z-index: 1000; animation: floatUp 1s forwards; text-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        @keyframes floatUp { to { transform: translateY(-50px); opacity: 0; } }
+
+        /* --- Toast Notification --- */
+        #toast {
+            position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+            background: var(--text-main); color: var(--bg-color); padding: 10px 20px;
+            border-radius: 30px; font-weight: 600; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 200;
+        }
+        #toast.show { opacity: 1; bottom: 110px; }
+
+        /* --- FAB & Modals --- */
+        .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 20px; background: var(--text-main); color: var(--bg-color); border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: grid; place-items: center; cursor: pointer; transition: transform 0.3s; z-index: 99; }
+        .fab:hover { transform: translateY(-5px) rotate(90deg); }
+        
+        .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 2000; /* FIXED: High Z-Index */ display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
+        .modal-bg.open { display: flex; opacity: 1; }
+        
+        .modal { 
+            background: var(--card-bg); width: 90%; max-width: 480px; 
+            border-radius: 24px; padding: 25px; 
+            box-shadow: var(--shadow); border: 1px solid var(--glass-border); 
+            transform: scale(0.9); transition: transform 0.3s;
+            max-height: 85vh; overflow-y: auto;
+        }
+        .modal-bg.open .modal { transform: scale(1); }
+
+        .inp-wrap { margin-bottom: 15px; width: 100%; display: block; }
+        .lbl { display: block; font-size: 0.75rem; font-weight: 800; color: var(--text-sec); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .inp { 
+            width: 100%; 
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box; 
+            padding: 14px; 
+            border-radius: 12px; 
+            border: 1px solid var(--glass-border); 
+            background: var(--input-bg); 
+            color: var(--text-main); 
+            font-family: inherit; 
+            font-size: 1rem; 
+        }
+        .inp:focus { background: var(--card-bg); border-color: var(--accent); }
+        
+        .scroll-spacer { height: 160px; width: 100%; pointer-events: none; }
+
+        .modal-btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .btn { padding: 12px 24px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; }
+        .btn-save { background: var(--text-main); color: var(--bg-color); }
+
+        #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 100; }
+    </style>
+</head>
+<body>
+
+<canvas id="confetti"></canvas>
+<div id="toast"></div>
+
+<div class="container">
+    <header>
+        <div class="greeting-area">
+            <h1 id="greeting">Hello</h1>
+            <span class="date" id="date-display">Date</span>
+        </div>
+        <div class="header-controls">
+            <button class="icon-btn" onclick="cycleTheme()" id="theme-btn" aria-label="Toggle Theme"></button>
+            <button class="icon-btn" onclick="toggleSound()" id="sound-btn" aria-label="Toggle Sound"></button>
+            <button class="icon-btn" onclick="openSettings()" aria-label="Settings">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Dashboard -->
+    <div class="hud-grid">
+        <div class="hud-card prog-wrap">
+            <div class="prog-circle">
+                <svg viewBox="0 0 60 60"><circle class="bg-c" cx="30" cy="30" r="26"></circle><circle class="fg-c" id="prog-ring" cx="30" cy="30" r="26" stroke-dasharray="163" stroke-dashoffset="163"></circle></svg>
+            </div>
+            <div><h2 style="margin:0; font-size:1.4rem;" id="tasks-rem">0</h2><p style="margin:0; font-size:0.75rem; color:var(--text-sec);">Pending</p></div>
+        </div>
+        <div class="hud-card">
+            <div class="xp-head">
+                <span class="badge" id="lvl-badge" onclick="openLevelRoadmap()">LVL 1</span>
+                <span style="color:var(--text-sec)"><span id="xp-val" style="color:var(--xp-color)">0</span> XP</span>
+            </div>
+            <div class="milestone-hint" id="milestone-hint">🎯 Next: Level 2 (100 XP)</div>
+            <div class="xp-track"><div class="xp-fill" id="xp-bar"></div></div>
+        </div>
+    </div>
+
+    <div class="cat-scroll" id="cat-filters"></div>
+    <div class="task-list" id="task-list"></div>
+    
+    <div class="scroll-spacer"></div>
+</div>
+
+<button class="fab" onclick="openModal()"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+
+<!-- Task Modal -->
+<div class="modal-bg" id="modal-overlay">
+    <div class="modal">
+        <h2 style="margin-top:0;" id="modal-title">New Mission</h2>
+        <input type="hidden" id="edit-id">
+        
+        <div class="inp-wrap"><label class="lbl">Title</label><input type="text" class="inp" id="inp-title" placeholder="Task Title"></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;" class="inp-wrap">
+            <div><label class="lbl">Category</label><select class="inp" id="inp-cat"></select></div>
+            <div><label class="lbl">Priority</label><select class="inp" id="inp-prio"><option value="Low">Low</option><option value="Medium" selected>Medium</option><option value="High">High</option></select></div>
+        </div>
+        <div class="inp-wrap"><label class="lbl">Due Date</label><input type="date" class="inp" id="inp-date"></div>
+        <div class="inp-wrap">
+            <label class="lbl">Sub-tasks</label>
+            <div style="display:flex; gap:10px; margin-bottom:10px;"><input type="text" class="inp" id="inp-sub" placeholder="Add step..." onkeypress="if(event.key==='Enter') addSub()"><button style="width:50px; border-radius:12px; border:none; background:var(--accent); color:white; cursor:pointer; height:48px;" onclick="addSub()">+</button></div>
+            <div id="temp-subs"></div>
+        </div>
+        
+        <div class="modal-btns"><button class="btn" style="background:transparent; color:var(--text-sec);" onclick="closeModal()">Cancel</button><button class="btn btn-save" onclick="saveTask()">Save</button></div>
+    </div>
+</div>
+
+<!-- Level Roadmap Modal -->
+<div class="modal-bg" id="roadmap-overlay">
+    <div class="modal">
+        <h2 style="margin-top:0;">🏆 Level Roadmap</h2>
+        <p style="color:var(--text-sec); font-size:0.85rem; margin-bottom:15px;">Complete tasks to unlock themes and titles!</p>
+        <div class="level-roadmap" id="level-roadmap"></div>
+        <div class="modal-btns" style="justify-content:center; margin-top:20px;">
+            <button class="btn btn-save" onclick="closeLevelRoadmap()">Got it!</button>
+        </div>
+    </div>
+</div>
+
+<!-- Reward Modal -->
+<div class="modal-bg" id="reward-overlay">
+    <div class="modal reward-modal">
+        <div class="reward-icon">🎉</div>
+        <h2 style="font-size:1.8rem; margin:0 0 10px 0;">LEVEL UP!</h2>
+        <p style="color:var(--text-sec);">You reached Level <span id="reward-lvl" style="color:var(--accent); font-weight:bold;"></span></p>
+        <div class="quote-box" id="reward-quote">"Quote goes here"</div>
+        <div id="reward-unlock" style="background:var(--xp-color); color:white; padding:10px; border-radius:8px; margin-top:10px; font-weight:bold; display:none;"></div>
+        <div class="modal-btns" style="justify-content:center; margin-top:20px;">
+            <button class="btn btn-save" onclick="closeReward()">Awesome!</button>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-bg" id="settings-overlay">
+    <div class="modal" style="max-width: 350px;">
+        <h2>Settings</h2>
+        <button class="btn" onclick="resetXP()" style="width:100%; background:var(--card-bg); border:1px solid var(--glass-border); color:var(--text-main); margin-bottom:15px;">🔄 Reset Progress</button>
+        <button class="btn" onclick="hardReset()" style="width:100%; background:rgba(255,0,0,0.1); color:var(--danger); border:1px solid var(--danger);">⚠️ Wipe Data</button>
+        
+        <div style="margin-top: 25px; border-top: 1px solid var(--glass-border); padding-top: 20px; text-align: center;">
+            <p style="font-size: 0.75rem; color: var(--text-sec); margin-bottom: 8px; line-height: 1.4;">
+                <strong>Privacy Policy:</strong><br>
+                This app uses your device's local storage to save tasks. We do not collect, store, or share any personal data on external servers.
+            </p>
+            <p style="font-size: 0.8rem; color: var(--text-sec);">
+                <strong>Contact:</strong><br>
+                <a href="mailto:robinhd478@gmail.com" style="color: var(--accent); text-decoration: none; font-weight: 600;">robinhd478@gmail.com</a>
+            </p>
+        </div>
+
+        <div class="modal-btns"><button class="btn" style="background:transparent;" onclick="closeSettings()">Close</button></div>
+    </div>
+</div>
+
+<script>
+    /* --- ASSETS & CONFIG --- */
+    const ICONS = {
+        moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>',
+        sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>',
+        soundOn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>',
+        soundOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>',
+    };
+
+    const QUOTES = ["Believe you can.", "Your potential is endless.", "Keep going.", "Success is near.", "Dream big.", "Action is key."];
+    const THEMES = ['light', 'dark', 'midnight', 'hacker', 'sunset'];
+    const XP_TASK = 20; const XP_SUB = 5;
+
+    /* --- LEVEL REWARDS DATABASE --- */
+    const LEVEL_REWARDS = {
+        5: { reward: "🌙 Midnight Theme", emoji: "🌙" },
+        10: { reward: "💻 Hacker Theme", emoji: "💻" },
+        15: { reward: "🌅 Sunset Theme", emoji: "🌅" },
+        20: { reward: "👑 Master Title", emoji: "👑" }
+    };
+
+    /* --- STATE --- */
+    const state = {
+        tasks: JSON.parse(localStorage.getItem('fs_tasks')) || [],
+        xp: parseInt(localStorage.getItem('fs_xp')) || 0,
+        level: parseInt(localStorage.getItem('fs_lvl')) || 1,
+        cats: JSON.parse(localStorage.getItem('fs_cats')) || ['Work', 'Personal', 'Growth'],
+        theme: localStorage.getItem('fs_theme') || 'light',
+        unlockedThemes: JSON.parse(localStorage.getItem('fs_unlocked')) || ['light', 'dark'],
+        filter: 'All', sound: true, tempSubs: []
+    };
+
+    /* --- INIT --- */
+    function init() {
+        setGreeting(); applyTheme(state.theme); updateSoundIcon();
+        renderCats(); renderTasks(); updateHud();
+    }
+
+    function setGreeting() {
+        const hr = new Date().getHours();
+        document.getElementById('greeting').innerText = hr >= 18 ? "Good Evening" : hr >= 12 ? "Good Afternoon" : "Good Morning";
+        document.getElementById('date-display').innerText = new Date().toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
+    }
+
+    /* --- RENDER --- */
+    function renderCats() {
+        const div = document.getElementById('cat-filters'); const sel = document.getElementById('inp-cat');
+        let html = `<div class="pill ${state.filter==='All'?'active':''}" onclick="setFilter('All')">All</div>`;
+        state.cats.forEach(c => { html += `<div class="pill ${state.filter===c?'active':''}" onclick="setFilter('${c}')">${c} <span style="opacity:0.5;margin-left:5px;" onclick="delCat('${c}', event)">×</span></div>`; });
+        html += `<div class="pill add-pill" onclick="addCat()">+</div>`;
+        div.innerHTML = html; sel.innerHTML = state.cats.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    function renderTasks() {
+        const list = document.getElementById('task-list'); list.innerHTML = '';
+        const visible = state.tasks.filter(t => state.filter === 'All' || t.category === state.filter);
+        
+        if(visible.length === 0) {
+            list.innerHTML = `
+            <div class="empty-state">
+                <div class="cat-wrapper">
+                    <svg class="dream-bubble" width="60" height="50" viewBox="0 0 60 50">
+                        <path d="M10,25 Q5,25 5,20 Q5,15 10,15 Q15,10 20,15 Q25,10 30,15 Q35,10 40,15 Q45,10 50,15 Q55,15 55,20 Q55,25 50,25 Q55,30 50,35 Q55,40 50,45 Q45,50 40,45 Q35,50 30,45 Q25,50 20,45 Q15,45 10,40 Q5,40 5,35 Q5,30 10,25 Z M45,45 L50,50" fill="none" stroke="var(--text-sec)" stroke-width="1.5" opacity="0.6" />
+                        <text x="18" y="32" class="z-letter z1">Z</text>
+                        <text x="28" y="28" class="z-letter z2">Z</text>
+                        <text x="38" y="24" class="z-letter z3">Z</text>
+                    </svg>
+                    <svg class="cat-body-svg" viewBox="0 0 200 150" preserveAspectRatio="xMidYMid meet">
+                        <path d="M40,110 Q20,110 20,90 Q20,70 40,70 L60,70" fill="none" stroke="#A0A0A0" stroke-width="14" stroke-linecap="round" />
+                        <path d="M40,120 Q30,120 30,90 Q30,50 80,40 Q130,30 160,80 Q180,110 140,120 Z" fill="#A0A0A0" />
+                        <circle cx="150" cy="90" r="35" fill="#A0A0A0" />
+                        <path d="M130,60 L140,30 L155,60 Z" fill="#A0A0A0" />
+                        <path d="M138,55 L142,40 L148,55 Z" fill="#FFB7B2" />
+                        <path d="M165,60 L180,35 L185,65 Z" fill="#A0A0A0" />
+                        <path d="M170,58 L178,45 L180,60 Z" fill="#FFB7B2" />
+                        <path d="M138,95 Q145,100 152,95" fill="none" stroke="#606060" stroke-width="2" stroke-linecap="round" />
+                        <path d="M162,95 Q169,100 176,95" fill="none" stroke="#606060" stroke-width="2" stroke-linecap="round" />
+                        <path d="M157,105 L153,105 L155,108 Z" fill="#FFB7B2" />
+                        <path d="M130,95 L115,90" stroke="#606060" stroke-width="1" />
+                        <path d="M130,100 L115,105" stroke="#606060" stroke-width="1" />
+                        <path d="M185,95 L200,90" stroke="#606060" stroke-width="1" />
+                        <path d="M185,100 L200,105" stroke="#606060" stroke-width="1" />
+                    </svg>
+                </div>
+                <p style="color:var(--text-sec); font-weight:600; margin-top:0px;">All clear! Time to relax...</p>
+            </div>`; 
+            return; 
+        }
+
+        visible.forEach((t, index) => {
+            const el = document.createElement('div'); el.className = `task-card ${t.completed ? 'completed' : ''}`; el.style.animationDelay = `${index * 0.05}s`;
+            let subHtml = t.subtasks && t.subtasks.length ? `<div class="subs">` + t.subtasks.map((s, i) => `<div class="sub-row ${s.done?'done':''}" onclick="toggleSub(${t.id}, ${i}, event)"><div class="sub-sq"></div><span>${s.text}</span></div>`).join('') + `</div>` : '';
+            const dateStr = t.date ? `📅 ${new Date(t.date).toLocaleDateString()}` : '';
+            el.innerHTML = `<div class="card-main"><div class="check-box" onclick="toggleTask(${t.id}, event)"><svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg></div><div class="info"><span class="title">${t.title}</span><div class="tags"><span class="tag" style="color:var(--accent)">#${t.category}</span><span class="tag">${t.priority}</span>${dateStr ? `<span class="tag">${dateStr}</span>` : ''}</div>${subHtml}<div class="actions"><button class="act-btn" onclick="openModal(${t.id})">✎ Edit</button><button class="act-btn btn-del" onclick="delTask(${t.id}, this)">🗑 Delete</button></div></div></div>`;
+            list.appendChild(el);
+        });
+        updateHud();
+    }
+
+    /* --- LEVEL ROADMAP --- */
+    window.openLevelRoadmap = () => {
+        const overlay = document.getElementById('roadmap-overlay');
+        const roadmap = document.getElementById('level-roadmap');
+        roadmap.innerHTML = '';
+        
+        for(let i = 1; i <= 20; i++) {
+            const isUnlocked = i <= state.level;
+            const isCurrent = i === state.level;
+            const reward = LEVEL_REWARDS[i];
+            
+            const item = document.createElement('div');
+            item.className = `level-item ${isCurrent ? 'current' : ''} ${isUnlocked ? 'unlocked' : ''}`;
+            item.innerHTML = `
+                <div class="level-num">${i}</div>
+                <div class="level-reward">${reward ? reward.reward : i === 20 ? '👑 Master' : '⭐'}</div>
+            `;
+            roadmap.appendChild(item);
+        }
+        
+        overlay.classList.add('open');
+        playSound('click');
+    };
+
+    window.closeLevelRoadmap = () => {
+        document.getElementById('roadmap-overlay').classList.remove('open');
+    };
+
+    /* --- MILESTONE HINT --- */
+    function updateMilestoneHint() {
+        const hint = document.getElementById('milestone-hint');
+        const nextLevel = state.level + 1;
+        const xpNeeded = (nextLevel * 100) - state.xp;
+        
+        // Check for next reward
+        const nextRewardLevel = [5, 10, 15, 20].find(lvl => lvl > state.level);
+        
+        if(nextRewardLevel && nextRewardLevel - state.level <= 2) {
+            const reward = LEVEL_REWARDS[nextRewardLevel];
+            const totalXpNeeded = (nextRewardLevel * 100) - state.xp; // Approximate calculation
+            hint.innerHTML = `${reward.emoji} Unlock ${reward.reward} soon!`;
+        } else {
+            hint.innerHTML = `🎯 Next: Level ${nextLevel} (${xpNeeded} XP)`;
+        }
+    }
+
+    /* --- INTERACTIONS --- */
+    function showFloat(x, y, amt) {
+        const el = document.createElement('div'); el.className = 'float-text'; el.innerText = `+${amt} XP`;
+        el.style.left = `${x}px`; el.style.top = `${y}px`; document.body.appendChild(el);
+        setTimeout(() => el.remove(), 1000);
+    }
+
+    window.toggleTask = (id, e) => {
+        const t = state.tasks.find(x => x.id === id); t.completed = !t.completed;
+        if(t.completed) { modifyXp(XP_TASK); playSound('done'); fireConfetti(); if(e) showFloat(e.clientX, e.clientY, XP_TASK); } 
+        else { modifyXp(-XP_TASK); playSound('click'); }
+        save(); renderTasks();
+    };
+
+    window.toggleSub = (tid, i, e) => {
+        e.stopPropagation(); const t = state.tasks.find(x => x.id === tid); const s = t.subtasks[i]; s.done = !s.done;
+        if(s.done) { modifyXp(XP_SUB); playSound('click'); showFloat(e.clientX, e.clientY, XP_SUB); } else { modifyXp(-XP_SUB); }
+        save(); renderTasks();
+    };
+
+    window.delTask = (id, btn) => {
+        if(confirm('Delete?')) { btn.closest('.task-card').classList.add('deleting'); setTimeout(() => { state.tasks = state.tasks.filter(t => t.id !== id); save(); renderTasks(); }, 500); }
+    };
+
+    /* --- XP & REWARDS --- */
+    function modifyXp(amt) {
+        state.xp += amt; if(state.xp < 0) state.xp = 0;
+        const target = state.level * 100;
+        if(state.xp >= target) {
+            state.xp -= target; state.level++;
+            checkRewards(state.level); showRewardModal(state.level);
+            playSound('done'); fireConfetti();
+        }
+        updateHud();
+    }
+
+    function checkRewards(lvl) {
+        let unlocked = ""; if(lvl === 5) unlocked = "midnight"; if(lvl === 10) unlocked = "hacker"; if(lvl === 15) unlocked = "sunset";
+        if(unlocked && !state.unlockedThemes.includes(unlocked)) {
+            state.unlockedThemes.push(unlocked);
+            const reward = LEVEL_REWARDS[lvl];
+            document.getElementById('reward-unlock').innerText = `${reward.emoji} Unlocked: ${reward.reward}`;
+            document.getElementById('reward-unlock').style.display = 'block';
+            save();
+        } else { document.getElementById('reward-unlock').style.display = 'none'; }
+    }
+
+    function showRewardModal(lvl) {
+        document.getElementById('reward-overlay').classList.add('open');
+        document.getElementById('reward-lvl').innerText = lvl;
+        document.getElementById('reward-quote').innerText = `"${QUOTES[Math.floor(Math.random() * QUOTES.length)]}"`;
+    }
+
+    window.closeReward = () => document.getElementById('reward-overlay').classList.remove('open');
+
+    function updateHud() {
+        document.getElementById('tasks-rem').innerText = state.tasks.filter(t => !t.completed).length;
+        const total = state.tasks.length || 1; const done = state.tasks.filter(t => t.completed).length;
+        document.getElementById('prog-ring').style.strokeDashoffset = 163 - ((done/total)*163);
+        document.getElementById('lvl-badge').innerText = `LVL ${state.level}`;
+        document.getElementById('xp-val').innerText = state.xp;
+        document.getElementById('xp-bar').style.width = `${(state.xp / (state.level*100)) * 100}%`;
+        updateMilestoneHint();
+    }
+
+    /* --- THEMES --- */
+    window.cycleTheme = () => {
+        const i = state.unlockedThemes.indexOf(state.theme);
+        state.theme = state.unlockedThemes[(i + 1) % state.unlockedThemes.length];
+        applyTheme(state.theme); showToast(`Theme: ${state.theme}`); save();
+    };
+
+    function applyTheme(t) {
+        document.documentElement.setAttribute('data-theme', t);
+        const isDark = ['dark', 'midnight', 'hacker'].includes(t);
+        document.getElementById('theme-btn').innerHTML = isDark ? ICONS.sun : ICONS.moon;
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast'); t.innerText = msg; t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2000);
+    }
+
+    /* --- MODALS --- */
+    window.setFilter = (c) => { state.filter = c; renderCats(); renderTasks(); playSound('click'); };
+    window.addCat = () => { const n = prompt('Name:'); if(n && !state.cats.includes(n)) { state.cats.push(n); save(); renderCats(); } };
+    
+    /* FIXED: Prevent empty screen on delete */
+    window.delCat = (c, e) => { 
+        e.stopPropagation(); 
+        if(confirm('Delete?')) { 
+            state.cats = state.cats.filter(cat => cat !== c); 
+            if(state.filter === c) state.filter = 'All'; // FIX: Reset filter if deleted
+            save(); renderCats(); renderTasks(); 
+        } 
+    };
+
+    window.openModal = (editId = null) => {
+        document.getElementById('modal-overlay').classList.add('open');
+        state.tempSubs = []; const title = document.getElementById('modal-title'); const hid = document.getElementById('edit-id');
+        if(editId) {
+            const t = state.tasks.find(x => x.id === editId);
+            title.innerText = 'Edit Mission'; hid.value = t.id;
+            document.getElementById('inp-title').value = t.title;
+            document.getElementById('inp-date').value = t.date || '';
+            state.tempSubs = JSON.parse(JSON.stringify(t.subtasks || []));
+        } else {
+            title.innerText = 'New Mission'; hid.value = '';
+            document.getElementById('inp-title').value = ''; document.getElementById('inp-date').value = '';
+            state.tempSubs = [];
+        }
+        renderTempSubs();
+    };
+
+    window.closeModal = () => document.getElementById('modal-overlay').classList.remove('open');
+    window.addSub = () => { const v = document.getElementById('inp-sub').value.trim(); if(v) { state.tempSubs.push({ text: v, done: false }); document.getElementById('inp-sub').value = ''; renderTempSubs(); } };
+    window.remSub = (i) => { state.tempSubs.splice(i, 1); renderTempSubs(); };
+    function renderTempSubs() { document.getElementById('temp-subs').innerHTML = state.tempSubs.map((s, i) => `<div style="display:flex; justify-content:space-between; padding:5px; background:rgba(0,0,0,0.05); margin-bottom:5px; border-radius:5px;"><span>${s.text}</span><span style="color:red; cursor:pointer" onclick="remSub(${i})">×</span></div>`).join(''); }
+
+    window.saveTask = () => {
+        const title = document.getElementById('inp-title').value.trim(); if(!title) return;
+        const d = { title, category: document.getElementById('inp-cat').value, priority: document.getElementById('inp-prio').value, date: document.getElementById('inp-date').value, subtasks: state.tempSubs };
+        const id = document.getElementById('edit-id').value;
+        if(id) { Object.assign(state.tasks.find(x => x.id == id), d); } else { state.tasks.unshift({ ...d, id: Date.now(), completed: false }); modifyXp(5); }
+        save(); renderTasks(); closeModal(); playSound('done');
+    };
+
+    window.openSettings = () => document.getElementById('settings-overlay').classList.add('open');
+    window.closeSettings = () => document.getElementById('settings-overlay').classList.remove('open');
+    window.resetXP = () => { if(confirm("Reset XP?")) { state.xp = 0; state.level = 1; state.unlockedThemes = ['light','dark']; save(); updateHud(); closeSettings(); } };
+    window.hardReset = () => { if(confirm("WIPE EVERYTHING?")) { localStorage.clear(); location.reload(); } };
+    
+    function save() { localStorage.setItem('fs_tasks', JSON.stringify(state.tasks)); localStorage.setItem('fs_xp', state.xp); localStorage.setItem('fs_lvl', state.level); localStorage.setItem('fs_cats', JSON.stringify(state.cats)); localStorage.setItem('fs_theme', state.theme); localStorage.setItem('fs_unlocked', JSON.stringify(state.unlockedThemes)); }
+
+    /* --- AUDIO & FX --- */
+    window.toggleSound = () => { state.sound = !state.sound; updateSoundIcon(); };
+    function updateSoundIcon() { document.getElementById('sound-btn').innerHTML = state.sound ? ICONS.soundOn : ICONS.soundOff; }
+    
+    let audioCtx;
+    function playSound(type) {
+        if(!state.sound) return;
+        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        
+        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+        if(type === 'click') { osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(50, now+0.1); gain.gain.setValueAtTime(0.05, now); gain.gain.linearRampToValueAtTime(0, now+0.1); osc.start(now); osc.stop(now+0.1); }
+        else { osc.type = 'triangle'; osc.frequency.setValueAtTime(500, now); osc.frequency.setValueAtTime(1000, now+0.1); gain.gain.setValueAtTime(0.05, now); gain.gain.linearRampToValueAtTime(0, now+0.3); osc.start(now); osc.stop(now+0.3); }
+    }
+
+    const cvs = document.getElementById('confetti'); const ctx = cvs.getContext('2d');
+    let parts = []; function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; } window.onresize = resize; resize();
+    function fireConfetti() {
+        const isGold = state.level >= 10;
+        for(let i=0; i<60; i++) { parts.push({ x: window.innerWidth/2, y: window.innerHeight/2, vx: (Math.random()-0.5)*(isGold?25:20), vy: (Math.random()-0.5)*(isGold?25:20), c: isGold ? '#FFD700' : `hsl(${Math.random()*360},100%,50%)`, life: 100 }); }
+        loop();
+    }
+    function loop() {
+        if(!parts.length) return; ctx.clearRect(0,0,cvs.width,cvs.height);
+        parts.forEach((p,i) => { p.x+=p.vx; p.y+=p.vy; p.vy+=0.5; p.life--; ctx.fillStyle=p.c; ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2); ctx.fill(); if(p.life<=0) parts.splice(i,1); });
+        requestAnimationFrame(loop);
+    }
+
+    init();
+</script>
+</body>
+</html>
