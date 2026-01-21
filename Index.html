@@ -429,8 +429,13 @@
     }
 
     function setGreeting() {
+        
         const hr = new Date().getHours();
-        document.getElementById('greeting').innerText = hr >= 18 ? "Good Evening" : hr >= 12 ? "Good Afternoon" : "Good Morning";
+let greet = "Good Morning";
+if(hr >= 12) greet = "Good Afternoon";
+if(hr >= 18) greet = "Good Evening";
+if(hr >= 22 || hr < 4) greet = "Good Night"; // 10 PM to 4 AM
+document.getElementById('greeting').innerText = greet;
         document.getElementById('date-display').innerText = new Date().toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
     }
 
