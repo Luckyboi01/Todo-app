@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://zadlist.netlify.app/sitemap.xml
